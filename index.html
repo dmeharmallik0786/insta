@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Scraper</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 900px; margin: 40px auto; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #5c67f2; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; flex-grow: 1; font-size: 1em; }
+        button { padding: 10px 20px; background-color: #5c67f2; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .post { border: 1px solid #ddd; border-radius: 5px; background: white; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .post img { width: 100%; border-radius: 5px; display: block; }
+        .post p { font-size: 0.9em; margin: 8px 0 0; word-wrap: break-word; }
+        .post .likes { font-weight: bold; }
+        .status { text-align: center; font-size: 1.1em; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Instagram Hashtag Scraper</h1>
+    <div class="controls">
+        <input type="text" id="hashtagInput" placeholder="Enter hashtag (e.g., technology)">
+        <input type="number" id="countInput" value="12" min="1" max="100">
+        <button id="scrapeButton">Scrape</button>
+    </div>
+    <div id="results" class="status"></div>
+
+    <script>
+        const scrapeButton = document.getElementById('scrapeButton');
+        const hashtagInput = document.getElementById('hashtagInput');
+        const countInput = document.getElementById('countInput');
+        const resultsDiv = document.getElementById('results');
+
+        scrapeButton.addEventListener('click', async () => {
+            const hashtag = hashtagInput.value.trim();
+            const count = countInput.value;
+
+            if (!hashtag) {
+                alert('Please enter a hashtag.');
+                return;
+            }
+
+            resultsDiv.className = 'status';
+            resultsDiv.innerHTML = '<p>🚀 Scraping... This can take a moment.</p>';
+            scrapeButton.disabled = true;
+
+            try {
+                const response = await fetch(`/scrape?hashtag=${hashtag}&count=${count}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server Error (${response.status}): ${errorText}`);
+                }
+
+                const data = await response.json();
+                resultsDiv.innerHTML = '';
+                resultsDiv.className = '';
+
+                if (data.length === 0) {
+                    resultsDiv.className = 'status';
+                    resultsDiv.innerHTML = '<p>🤷‍♂️ No posts found for this hashtag.</p>';
+                }
+
+                data.forEach(post => {
+                    const postElement = document.createElement('div');
+                    postElement.className = 'post';
+                    const caption = post.caption ? (post.caption.substring(0, 100) + '...') : 'No caption';
+                    postElement.innerHTML = `
+                        <a href="${post.url}" target="_blank" rel="noopener noreferrer">
+                            <img src="${post.displayUrl}" alt="Instagram post for #${hashtag}" loading="lazy">
+                        </a>
+                        <p class="likes">❤️ ${post.likesCount.toLocaleString()}</p>
+                        <p>${caption}</p>
+                    `;
+                    resultsDiv.appendChild(postElement);
+                });
+
+            } catch (error) {
+                resultsDiv.className = 'status';
+                resultsDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error('Scraping failed:', error);
+            } finally {
+                scrapeButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
